@@ -22,7 +22,7 @@ return {
     'jay-babu/mason-nvim-dap.nvim',
 
     -- Add your own debuggers here
-    'leoluz/nvim-dap-go',
+    'vadimcn/codelldb',
   },
   keys = {
     -- Basic debugging keymaps, feel free to change to your liking!
@@ -136,13 +136,27 @@ return {
     dap.listeners.before.event_terminated['dapui_config'] = dapui.close
     dap.listeners.before.event_exited['dapui_config'] = dapui.close
 
-    -- Install golang specific config
-    require('dap-go').setup {
-      delve = {
-        -- On Windows delve must be run attached or it crashes.
-        -- See https://github.com/leoluz/nvim-dap-go/blob/main/README.md#configuring
-        detached = vim.fn.has 'win32' == 0,
+    local mason_registry = require 'mason-registry'
+    local codelldb = mason_registry.get_package 'codelldb'
+    local extension_path = codelldb:get_install_path() .. '/extension/'
+    local codelldb_path = extension_path .. 'adapter/codelldb'
+
+    dap.adapters.codelldb = {
+      type = 'executable',
+      command = codelldb_path,
+    }
+    dap.configurations.cpp = {
+      {
+        name = 'Launch file',
+        type = 'codelldb',
+        request = 'launch',
+        program = function()
+          return vim.fn.input('Path to executable: ', vim.fn.getcwd() .. '/', 'file')
+        end,
+        cwd = '${workspaceFolder}',
+        stopOnEntry = false,
       },
     }
+    dap.configurations.c = dap.configurations.cpp
   end,
 }
